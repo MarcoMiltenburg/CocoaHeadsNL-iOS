@@ -16,8 +16,6 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
     var meetupsArray = [Meetup]()
     var searchedObjectId : String? = nil
     
-    weak var activityIndicatorView: UIActivityIndicatorView!
-    
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
 
@@ -30,6 +28,10 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
         let nib = UINib(nibName: "MeetupCell", bundle: nil)
         self.tableView.registerNib(nib, forCellReuseIdentifier: MeetupCell.Identifier)
 
+        self.refreshControl = UIRefreshControl()
+        self.refreshControl!.addTarget(self, action: #selector(MeetupsViewController.reloadMeetups), forControlEvents: UIControlEvents.ValueChanged)
+        tableView.addSubview(self.refreshControl!)
+        
         let backItem = UIBarButtonItem(title: "Events", style: .Plain, target: nil, action: nil)
         self.navigationItem.backBarButtonItem = backItem
         
@@ -64,11 +66,11 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
     }
     
     override func viewWillAppear(animated: Bool) {
-        self.reloadMeetups()
     }
     
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(animated)
+        self.reloadMeetups()
         
         if let searchedObjectId = searchedObjectId {
             self.searchedObjectId = nil
@@ -118,10 +120,9 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
     }
     
     func reloadMeetups() {
-        let activityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.Gray)
-        self.activityIndicatorView = activityIndicatorView
-        tableView.backgroundView = activityIndicatorView
-        self.activityIndicatorView.startAnimating()
+        self.tableView.backgroundView = nil
+        self.tableView.setContentOffset(CGPointMake(0, self.tableView.contentOffset.y - self.refreshControl!.frame.size.height), animated: true);
+        self.refreshControl?.beginRefreshing()
         self.fetchMeetups()
     }
     
@@ -287,8 +288,7 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
         operation.queryCompletionBlock = { [unowned self] (cursor, error) in
             dispatch_async(dispatch_get_main_queue()) {
 
-                self.activityIndicatorView.hidesWhenStopped = true
-                self.activityIndicatorView.stopAnimating()
+                self.refreshControl?.endRefreshing()
 
                 if error == nil {
                     
