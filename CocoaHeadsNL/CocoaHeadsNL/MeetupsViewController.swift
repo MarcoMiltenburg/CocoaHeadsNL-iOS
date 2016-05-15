@@ -61,16 +61,10 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
         
         self.discover()
         self.subscribe()
-        
-        let activityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.Gray)
-        tableView.backgroundView = activityIndicatorView
-        self.activityIndicatorView = activityIndicatorView
-        
-        activityIndicatorView.startAnimating()
     }
     
     override func viewWillAppear(animated: Bool) {
-        self.fetchMeetups()
+        self.reloadMeetups()
     }
     
     override func viewDidAppear(animated: Bool) {
@@ -121,6 +115,14 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
         subscription.notificationInfo = info
         
         publicDB.saveSubscription(subscription) { record, error in }
+    }
+    
+    func reloadMeetups() {
+        let activityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.Gray)
+        self.activityIndicatorView = activityIndicatorView
+        tableView.backgroundView = activityIndicatorView
+        self.activityIndicatorView.startAnimating()
+        self.fetchMeetups()
     }
     
     //MARK: - 3D Touch
@@ -284,17 +286,23 @@ class MeetupsViewController: UITableViewController, UIViewControllerPreviewingDe
         
         operation.queryCompletionBlock = { [unowned self] (cursor, error) in
             dispatch_async(dispatch_get_main_queue()) {
+
+                self.activityIndicatorView.hidesWhenStopped = true
+                self.activityIndicatorView.stopAnimating()
+
                 if error == nil {
                     
                     self.meetupsArray = CKMeetups
-                    self.activityIndicatorView.stopAnimating()
-                    self.activityIndicatorView.hidesWhenStopped = true
                     self.tableView.reloadData()
                     
                 } else {
-                    let ac = UIAlertController(title: "Fetch failed", message: "There was a problem fetching the list of meetups; please try again: \(error!.localizedDescription)", preferredStyle: .Alert)
-                    ac.addAction(UIAlertAction(title: "OK", style: .Default, handler: nil))
-                    self.presentViewController(ac, animated: true, completion: nil)
+                    
+                    let label = UILabel()
+                    label.textColor = UIColor.darkGrayColor()
+                    label.numberOfLines = 0
+                    label.text = "There was a problem fetching the list of meetups. Please try again."
+                    label.textAlignment = .Center
+                    self.tableView.backgroundView = label
                 }
             }
         }
